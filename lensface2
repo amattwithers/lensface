@@ -1,0 +1,60 @@
+#!/usr/bin/env python2
+
+import sys
+import time
+import pygame
+import pygame.camera
+
+
+def convert_to_gs(surf):
+    width, height = surf.get_size()
+    for x in range(width):
+        for y in range(height):
+            red, green, blue, alpha = surf.get_at((x, y))
+            average = (red + green + blue) // 3
+            gs_color = (average, average, average, alpha)
+            surf.set_at((x, y), gs_color)
+    return surf
+
+x = 640
+y = 480
+
+pygame.init()
+size = width, height = x, y
+screen = pygame.display.set_mode(size)
+# ball = pygame.image.load("ball.bmp")
+# ballrect = ball.get_rect()
+
+pygame.camera.init()
+cam = pygame.camera.Camera("/dev/video0", (x, y))
+cam.start()
+print "Camera On\n"
+img = cam.get_image()
+while cam.query_image() == False:
+    time.sleep(0.300)
+cam.stop()
+print "Camera Off\n"
+pygame.image.save(img, "filename.jpg")
+
+img = convert_to_gs(img)
+
+lenssize = 200
+lens = pygame.image.load("lens.png")
+lens = pygame.transform.scale(lens, (lenssize, lenssize))
+lensrect = lens.get_rect()
+
+pygame.mouse.set_visible(False)
+
+while 1:
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+
+    mouse = pygame.mouse.get_pos()
+    screen.fill((0, 0, 0))
+    screen.blit(img, (0, 0))
+    screen.blit(lens, (mouse[0] - (lenssize/2), mouse[1] - (lenssize/2)))
+    pos = pygame.mouse.get_pos()
+
+    pygame.display.flip()
