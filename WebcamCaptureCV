@@ -35,16 +35,18 @@ def make_gauss(centre, amp, sig, shapdim):
     return gaussblob
 
 
-ret, frame = video_capture.read()
+# ret, frame = video_capture.read()
+frame = cv.imread("/home/matthew/Working/lensface/face.jpg")
 rows, cols, ch = frame.shape
-gauss = make_gauss((rows/2, cols/2), 10, 1e10, (rows, cols))
+gauss = make_gauss((rows/2, cols/2), 1000, 1500, (rows, cols))
 grad = np.gradient(gauss)
-# print(grad)
+print(grad[0][450][450])
 
 while True:
     # Capture frame-by-frame
-    ret, frame = video_capture.read()
+    # ret, frame = video_capture.read()
 
+    print(type(frame))
     rows, cols, ch = frame.shape
 
     # Lensing
@@ -55,16 +57,29 @@ while True:
 
         for j in range(0, frame.shape[1]):
 
-            imagel[i, j, 0] = frame[i-int(grad[0][i][j]), j-int(grad[1][i][j]), 0]
-            imagel[i, j, 1] = frame[i-int(grad[0][i][j]), j-int(grad[1][i][j]), 1]
-            imagel[i, j, 2] = frame[i-int(grad[0][i][j]), j-int(grad[1][i][j]), 2]
+            if ((j-int(grad[1][i][j])) < 0):
+                imagel[i, j] = 0
 
-    # plt.imshow(imagel)
-    # plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
-    # plt.show()
+            elif ((j-int(grad[1][i][j])) > frame.shape[0]-1):
+                imagel[i, j] = 0
+
+            elif ((i-int(grad[0][i][j])) < 0):
+                imagel[i, j] = 0
+
+            elif ((i-int(grad[0][i][j])) > frame.shape[1]-1):
+                imagel[i, j] = 0
+
+            else:
+                imagel[i, j, 0] = frame[i-int(grad[0][i][j]), j-int(grad[1][i][j]), 0]
+                imagel[i, j, 1] = frame[i-int(grad[0][i][j]), j-int(grad[1][i][j]), 1]
+                imagel[i, j, 2] = frame[i-int(grad[0][i][j]), j-int(grad[1][i][j]), 2]
+
+    plt.imshow(imagel)
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
 
     # Display the resulting frame
-    cv.imshow('Video', imagel)
+    # cv.imshow('Video', imagel)
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
