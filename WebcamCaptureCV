@@ -10,10 +10,13 @@ numpy
 '''
 
 import cv2 as cv
+import time as time
 import numpy as np
 from numba import jit
 
 video_capture = cv.VideoCapture(0)  # 0 - Default camera
+# time.sleep(2)
+# video_capture.set(5,10)
 
 
 def make_gauss(centre, amp, sig, shapdim):
@@ -36,37 +39,39 @@ def make_gauss(centre, amp, sig, shapdim):
 
 
 ret, frame = video_capture.read()
-frame = cv.resize(frame, (0, 0), fx=0.5, fy=0.5)
+
+# frame = cv.resize(frame, (0, 0), fx=0.5, fy=0.5)
 rows, cols, ch = frame.shape
 gauss = make_gauss((rows/2, cols/2), 2000, 750, (rows, cols))
 grad = np.gradient(gauss)
 
-
 @jit(cache=True)
 def tranform(image, grad, lenx, leny):
+
+    imagel = image
 
     for i in range(0, lenx):
 
         for j in range(0, leny):
 
-            image[i, j, 0] = image[(i-int(grad[0][i][j])) % lenx, (j-int(grad[1][i][j])) % leny, 0]
-            image[i, j, 1] = image[(i-int(grad[0][i][j])) % lenx, (j-int(grad[1][i][j])) % leny, 1]
-            image[i, j, 2] = image[(i-int(grad[0][i][j])) % lenx, (j-int(grad[1][i][j])) % leny, 2]
+            imagel[i, j, 0] = image[(i-int(grad[0][i][j])), (j-int(grad[1][i][j])), 0]
+            imagel[i, j, 1] = image[(i-int(grad[0][i][j])), (j-int(grad[1][i][j])), 1]
+            imagel[i, j, 2] = image[(i-int(grad[0][i][j])), (j-int(grad[1][i][j])), 2]
 
-    return image
+    return imagel
 
 
 while True:
     # Capture frame-by-frame
     ret, frame = video_capture.read()
-    frame = cv.resize(frame, (0, 0), fx=0.5, fy=0.5)
+    # frame = cv.resize(frame, (0, 0), fx=0.5, fy=0.5)
     # Lensing
 
     # imagel = np.zeros(frame.shape, np.float32)
 
     # Display the resulting frame
     result = tranform(frame, grad, rows, cols)
-    result = cv.resize(result, (0, 0), fx=2.0, fy=2.0)
+    # result = cv.resize(result, (0, 0), fx=2.0, fy=2.0)
     result = cv.flip(result, 1)
     cv.imshow('Video', result)
 
