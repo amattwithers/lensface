@@ -12,11 +12,6 @@ numpy
 import cv2 as cv
 import time as time
 import numpy as np
-from numba import jit
-
-video_capture = cv.VideoCapture(0)  # 0 - Default camera
-# time.sleep(2)
-# video_capture.set(5,10)
 
 
 def make_gauss(centre, amp, sig, shapdim):
@@ -38,46 +33,51 @@ def make_gauss(centre, amp, sig, shapdim):
     return gaussblob
 
 
-ret, frame = video_capture.read()
+def calc_tranform(grad, lenx, leny):
 
-# frame = cv.resize(frame, (0, 0), fx=0.5, fy=0.5)
-rows, cols, ch = frame.shape
-gauss = make_gauss((rows/2, cols/2), 2000, 750, (rows, cols))
-grad = np.gradient(gauss)
+    newxpos=np.zeros(lenx*leny, dtype=int)
+    newypos=np.zeros(lenx*leny, dtype=int)
 
-@jit(cache=True)
-def tranform(image, grad, lenx, leny):
-
-    imagel = image
+    index = 0
 
     for i in range(0, lenx):
 
         for j in range(0, leny):
 
-            imagel[i, j, 0] = image[(i-int(grad[0][i][j])), (j-int(grad[1][i][j])), 0]
-            imagel[i, j, 1] = image[(i-int(grad[0][i][j])), (j-int(grad[1][i][j])), 1]
-            imagel[i, j, 2] = image[(i-int(grad[0][i][j])), (j-int(grad[1][i][j])), 2]
+            newxpos[index]=i-int(grad[0][i][j]) % lenx
+            newypos[index]=j-int(grad[1][i][j]) % leny
+            index+=1
 
-    return imagel
+    return (newxpos, newypos)
 
 
-while True:
-    # Capture frame-by-frame
+def main(cam_id):
+
+    video_capture = cv.VideoCapture(cam_id)  # 0 - Default camera
     ret, frame = video_capture.read()
-    # frame = cv.resize(frame, (0, 0), fx=0.5, fy=0.5)
-    # Lensing
+    rows, cols, ch = frame.shape
+    gauss = make_gauss((rows/2, cols/2), 2000, 750, (rows, cols))
+    grad = np.gradient(gauss)
+    transpos = calc_tranform(grad, rows, cols)
 
-    # imagel = np.zeros(frame.shape, np.float32)
+    while True:
+        # Capture frame-by-frame
+        ret, frame = video_capture.read() # Capture Frame
+        lensim = frame[transpos] # Apply Transform
+        lensim = np.reshape(lensim, frame.shape) # Reshape back to 2D array
+        result = cv.flip(lensim, 1) # Mirror
+        cv.imshow('Video', result) # Display
 
-    # Display the resulting frame
-    result = tranform(frame, grad, rows, cols)
-    # result = cv.resize(result, (0, 0), fx=2.0, fy=2.0)
-    result = cv.flip(result, 1)
-    cv.imshow('Video', result)
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
 
-    if cv.waitKey(1) & 0xFF == ord('q'):
-        break
+    # When everything is done, release the capture
+    video_capture.release()
+    cv.destroyAllWindows()
 
-# When everything is done, release the capture
-video_capture.release()
-cv.destroyAllWindows()
+
+if __name__ == "__main__":
+
+    print("\nLensface\n\nPress q to quit.")
+
+    main(0)
