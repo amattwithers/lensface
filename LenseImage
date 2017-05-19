@@ -8,60 +8,31 @@ opencv (and python bindings)
 numpy
 
 '''
-
+import lensface as lf
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 import argparse as ap
 import os as os
 
-def make_gauss(centre, amp, sig, shapdim):
 
-    '''just makes a Gaussian centred on chosen coordinates to
-    use as the grav potential in the field'''
+def main(filename, gauss_loc, gauss_amp, gauss_sig):
 
-    sidelenx = shapdim[1]
-    sideleny = shapdim[0]
-    hx = int(sidelenx/2)
-    hy = int(sideleny/2)
-    l = np.zeros(shapdim)
+    savename = os.path.splitext(filename)[0] + "Lensed" + os.path.splitext(filename)[1]
 
-    for i in range(0, sideleny):
+    frame = cv.imread(filename)
+    rows, cols, ch = frame.shape
 
-        for j in range(0, sidelenx):
+    gauss, rad = lf.make_gauss(gauss_loc, gauss_amp, gauss_sig, (rows, cols))
+    grad = np.gradient(gauss)
 
-            l[i, j] = np.sqrt((centre[0]-i)**2+(centre[1]-j)**2)
+    transpos = lf.calc_tranform(grad, rows, cols)
 
-    gaussblob = amp*np.exp(-(l**2)/sig)
+    result = frame[transpos]
+    lensim = np.reshape(result, frame.shape) # Reshape back to 2D array
 
-    iter = 0
-    radius = 0
-    while (iter < sidelenx) :
-        if (gaussblob[hy][hx+iter] < 0.1*gaussblob[hy][hx]) :
-            radius = iter
-            break
-        else :
-            iter += 1
+    cv.circle(lensim, (int(gauss_loc[1]*cols), int(gauss_loc[0]*rows)), rad, 0, -1)
 
-    return gaussblob, int(radius)
-
-
-def calc_tranform(grad, lenx, leny):
-
-    newxpos=np.zeros(lenx*leny, dtype=int)
-    newypos=np.zeros(lenx*leny, dtype=int)
-
-    index = 0
-
-    for i in range(0, lenx):
-
-        for j in range(0, leny):
-
-            newxpos[index]=i-int(grad[1][i][j]) % lenx
-            newypos[index]=j-int(grad[0][i][j]) % leny
-            index+=1
-
-    return (newxpos, newypos)
+    cv.imwrite(savename, lensim)
 
 
 if __name__ == "__main__":
@@ -71,30 +42,17 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--path", help="Path to Image File", required=True, type=str)
     parser.add_argument("-a", "--amp", help="Amplitude of Gaussian", required=False, type=float)
     parser.add_argument("-s", "--sig", help="Sigma of Gaussian", required=False, type=float)
-    # parser.add_argument("-d", "--dev", help="Device ID", required=False, type=int)
 
     args = parser.parse_args()
 
-    filename = args.path
-    savename = os.path.splitext(filename)[0] + "Lensed" + os.path.splitext(filename)[1]
-
-    frame = cv.imread(filename)
-    rows, cols, ch = frame.shape
-
-    gauss_loc = (int(rows/2), int(cols/2))
-    gauss_amp = 1e4
-    gauss_sig = 1e3
+    loc = (0.5, 0.5)
+    amp = 1e4
+    sig = 1e3
 
     if (args.amp != None) :
-        gauss_amp = int(args.amp)
+        amp = int(args.amp)
 
     if (args.sig != None) :
-        gauss_sig = int(args.sig)
+        sig = int(args.sig)
 
-    gauss, rad = make_gauss(gauss_loc, gauss_amp, gauss_sig, (rows, cols))
-    grad = np.gradient(gauss)
-    transpos = calc_tranform(grad, rows, cols)
-    result = frame[transpos]
-    lensim = np.reshape(result, frame.shape) # Reshape back to 2D array
-    cv.circle(lensim, (gauss_loc[1], gauss_loc[0]), rad, 0, -1)
-    cv.imwrite(savename, lensim)
+    main(args.path, loc, amp, sig)
