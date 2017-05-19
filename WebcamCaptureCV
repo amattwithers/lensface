@@ -44,8 +44,8 @@ def calc_tranform(grad, lenx, leny):
 
         for j in range(0, leny):
 
-            newxpos[index]=i-int(grad[0][i][j]) % lenx
-            newypos[index]=j-int(grad[1][i][j]) % leny
+            newxpos[index]=i-int(grad[1][i][j]) % lenx
+            newypos[index]=j-int(grad[0][i][j]) % leny
             index+=1
 
     return (newxpos, newypos)
@@ -56,12 +56,19 @@ def main(cam_id):
     video_capture = cv.VideoCapture(cam_id)  # 0 - Default camera
     ret, frame = video_capture.read()
     rows, cols, ch = frame.shape
-    gauss = make_gauss((rows/2, cols/2), 2000, 750, (rows, cols))
+    gauss = make_gauss((rows/2, cols/2), 4e3, 3e2, (rows, cols))
     grad = np.gradient(gauss)
     transpos = calc_tranform(grad, rows, cols)
 
     while True:
         # Capture frame-by-frame
+        cv.namedWindow("Video", cv.WND_PROP_FULLSCREEN) # instead of cv2.WINDOW_AUTOSIZE
+        # cv.namedWindow("Video", )
+        cv.setWindowProperty("Video", cv.WND_PROP_FULLSCREEN, 1)
+        ### the above doesn't work but the following does ( values from
+        ###  http://pyopencv.googlecode.com/svn-history/r842/trunk/src_gen/highgui_h.py ) :
+        # cv.setWindowProperty("capture 0", 0, 1)
+
         ret, frame = video_capture.read() # Capture Frame
         lensim = frame[transpos] # Apply Transform
         lensim = np.reshape(lensim, frame.shape) # Reshape back to 2D array

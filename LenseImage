@@ -12,6 +12,8 @@ numpy
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse as ap
+import os as os
 
 def make_gauss(centre, amp, sig, shapdim):
 
@@ -20,6 +22,8 @@ def make_gauss(centre, amp, sig, shapdim):
 
     sidelenx = shapdim[1]
     sideleny = shapdim[0]
+    hx = int(sidelenx/2)
+    hy = int(sideleny/2)
     l = np.zeros(shapdim)
 
     for i in range(0, sideleny):
@@ -29,31 +33,68 @@ def make_gauss(centre, amp, sig, shapdim):
             l[i, j] = np.sqrt((centre[0]-i)**2+(centre[1]-j)**2)
 
     gaussblob = amp*np.exp(-(l**2)/sig)
-    return gaussblob
+
+    iter = 0
+    radius = 0
+    while (iter < sidelenx) :
+        if (gaussblob[hy][hx+iter] < 0.1*gaussblob[hy][hx]) :
+            radius = iter
+            break
+        else :
+            iter += 1
+
+    return gaussblob, int(radius)
 
 
-def tranform(image, grad, lenx, leny):
+def calc_tranform(grad, lenx, leny):
 
-    imagel = image
+    newxpos=np.zeros(lenx*leny, dtype=int)
+    newypos=np.zeros(lenx*leny, dtype=int)
+
+    index = 0
 
     for i in range(0, lenx):
 
         for j in range(0, leny):
 
-            imagel[i, j, 0] = image[(i-int(grad[0][i][j]) % frame.shape[0]), (j-int(grad[1][i][j]) % frame.shape[1]), 0]
-            imagel[i, j, 1] = image[(i-int(grad[0][i][j]) % frame.shape[0]), (j-int(grad[1][i][j]) % frame.shape[1]), 1]
-            imagel[i, j, 2] = image[(i-int(grad[0][i][j]) % frame.shape[0]), (j-int(grad[1][i][j]) % frame.shape[1]), 2]
+            newxpos[index]=i-int(grad[1][i][j]) % lenx
+            newypos[index]=j-int(grad[0][i][j]) % leny
+            index+=1
 
-    return imagel
+    return (newxpos, newypos)
 
 
 if __name__ == "__main__":
 
-    frame = cv.imread("Ben.jpg")
+    parser = ap.ArgumentParser(description="Arguments")
 
+    parser.add_argument("-p", "--path", help="Path to Image File", required=True, type=str)
+    parser.add_argument("-a", "--amp", help="Amplitude of Gaussian", required=False, type=float)
+    parser.add_argument("-s", "--sig", help="Sigma of Gaussian", required=False, type=float)
+    # parser.add_argument("-d", "--dev", help="Device ID", required=False, type=int)
+
+    args = parser.parse_args()
+
+    filename = args.path
+    savename = os.path.splitext(filename)[0] + "Lensed" + os.path.splitext(filename)[1]
+
+    frame = cv.imread(filename)
     rows, cols, ch = frame.shape
-    gauss = make_gauss((rows/3, cols/1.8), 5000, 1000, (rows, cols))
-    grad = np.gradient(gauss)
 
-    result = tranform(frame, grad, rows, cols)
-    cv.imwrite("BenLensed.jpg", result)
+    gauss_loc = (int(rows/2), int(cols/2))
+    gauss_amp = 1e4
+    gauss_sig = 1e3
+
+    if (args.amp != None) :
+        gauss_amp = int(args.amp)
+
+    if (args.sig != None) :
+        gauss_sig = int(args.sig)
+
+    gauss, rad = make_gauss(gauss_loc, gauss_amp, gauss_sig, (rows, cols))
+    grad = np.gradient(gauss)
+    transpos = calc_tranform(grad, rows, cols)
+    result = frame[transpos]
+    lensim = np.reshape(result, frame.shape) # Reshape back to 2D array
+    cv.circle(lensim, (gauss_loc[1], gauss_loc[0]), rad, 0, -1)
+    cv.imwrite(savename, lensim)
