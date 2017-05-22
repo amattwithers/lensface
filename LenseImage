@@ -13,6 +13,7 @@ import cv2 as cv
 import numpy as np
 import argparse as ap
 import os as os
+import matplotlib.pyplot as plt
 
 
 def main(filename, gauss_loc, gauss_amp, gauss_sig):
@@ -30,9 +31,17 @@ def main(filename, gauss_loc, gauss_amp, gauss_sig):
     result = frame[transpos]
     lensim = np.reshape(result, frame.shape) # Reshape back to 2D array
 
-    cv.circle(lensim, (int(gauss_loc[1]*cols), int(gauss_loc[0]*rows)), rad, 0, -1)
+    # cv.circle(lensim, (int(gauss_loc[1]*cols), int(gauss_loc[0]*rows)), rad, 0, -1)
 
     cv.imwrite(savename, lensim)
+
+    plt.figure()
+    img = plt.imshow(gauss, interpolation='nearest')
+    # img.set_cmap('hot')
+    plt.axis('off')
+    plt.margins(0,0)
+    plt.savefig("gauss.png", bbox_inches='tight', pad_inches = 0, dpi=300)
+    plt.show()
 
 
 if __name__ == "__main__":

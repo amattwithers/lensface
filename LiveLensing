@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+'''
+Required packages -
+
+python3
+opencv (and python bindings)
+numpy
+
+'''
+
+import lensface as lf
+import cv2 as cv
+import numpy as np
+import argparse as ap
+
+
+def main(cam_id, gauss_loc, gauss_amp, gauss_sig):
+
+    cap = cv.VideoCapture(cam_id)  # 0 - Default camera
+    cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
+    ret, frame = cap.read()
+    rows, cols, ch = frame.shape
+    gauss, rad = lf.make_gauss(gauss_loc, gauss_amp, gauss_sig, (rows, cols))
+    grad = np.gradient(gauss)
+    transpos = lf.calc_tranform(grad, rows, cols)
+
+    while True:
+        # Capture frame-by-frame
+        cv.namedWindow("Video", cv.WND_PROP_FULLSCREEN) # instead of cv2.WINDOW_AUTOSIZE
+        cv.setWindowProperty("Video", cv.WND_PROP_FULLSCREEN, 1)
+
+        ret, frame = cap.read() # Capture Frame
+        lensim = frame[transpos] # Apply Transform
+        lensim = np.reshape(lensim, frame.shape) # Reshape back to 2D array
+        result = cv.flip(lensim, 1) # Mirror
+        # cv.circle(result, (int(gauss_loc[1]*cols), int(gauss_loc[0]*rows)), rad, 0, -1)
+        cv.imshow('Video', result) # Display
+
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # When everything is done, release the capture
+    video_capture.release()
+    cv.destroyAllWindows()
+
+
+if __name__ == "__main__":
+
+    print("\nLive Lensing\n\nPress q to quit...\n\n")
+
+    parser = ap.ArgumentParser(description="Arguments")
+
+    parser.add_argument("-d", "--dev", help="Video Device ID", required=False, type=int)
+    parser.add_argument("-a", "--amp", help="Amplitude of Gaussian", required=False, type=float)
+    parser.add_argument("-s", "--sig", help="Sigma of Gaussian", required=False, type=float)
+
+    args = parser.parse_args()
+
+    loc = (0.5, 0.5)
+    amp = 2e5
+    sig = 1e4
+
+    device = -1
+
+    if (args.dev != None) :
+        device = args.dev
+
+    if (args.amp != None) :
+        amp = int(args.amp)
+
+    if (args.sig != None) :
+        sig = int(args.sig)
+
+    main(device, loc, amp, sig)
