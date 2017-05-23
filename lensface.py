@@ -36,11 +36,12 @@ def make_gauss(centre, amp, sig, shapdim):
             l[i, j] = np.sqrt((ceny-i)**2+(cenx-j)**2)
 
     gaussblob = amp*np.exp(-(l**2)/sig)
+    # gaussblob = amp * l
 
     iter = 0
     radius = 0
     # while (iter < sidelenx) :
-    #     if (gaussblob[hy][hx+iter] < gaussblob[hy][hx]) :
+    #     if (gaussblob[hy][hx+iter] < 0.01*gaussblob[hy][hx]) :
     #         radius = iter
     #         break
     #     else :
@@ -73,37 +74,24 @@ def calc_tranform(grad, lenx, leny):
             ii = i-int(grad[0][i][j]) % lenx
             jj = j-int(grad[1][i][j]) % leny
             minx = 1000
+            miny = 1000
             while True:
-                if abs(grad[0][ii][jj]) < 1.0:
+                if abs(grad[0][ii][jj]) < 1.0 or abs(grad[1][ii][jj]) < 1.0:
                     break
                 new_minx = i - ii + int(grad[0][ii][jj])
-                delta = minx - new_minx
+                new_miny = j - jj + int(grad[1][ii][jj])
+                deltax = minx - new_minx
+                deltay = miny - new_miny
                 # print (ii, jj, delta)
-                if delta < 0:
+                if deltax < 0 or deltay < 0:
                     break
                 else:
                     ii -= 1
                     jj -= 1
                     minx = new_minx
-
-            newxpos[index] = (i - int(grad[0][(ii+1)%lenx][(jj+1)%leny]))%lenx
-
-            ii = i-int(grad[0][i][j]) % lenx
-            jj = j-int(grad[1][i][j]) % leny
-            miny = 1000
-            while True:
-                if abs(grad[0][ii][jj]) < 1.0:
-                    break
-                new_miny = j - jj + int(grad[1][ii][jj])
-                delta = miny - new_miny
-                # print (ii, jj, delta)
-                if delta < 0:
-                    break
-                else:
-                    ii -= 1
-                    jj -= 1
                     miny = new_miny
 
+            newxpos[index] = (i - int(grad[0][(ii+1)%lenx][(jj+1)%leny]))%lenx
             newypos[index] = (j - int(grad[1][(ii+1)%lenx][(jj+1)%leny]))%leny
 
             # if grad[0][newxpos[index]][j] < gradx :

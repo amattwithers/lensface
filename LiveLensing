@@ -26,6 +26,9 @@ def main(cam_id, gauss_loc, gauss_amp, gauss_sig):
     grad = np.gradient(gauss)
     transpos = lf.calc_tranform(grad, rows, cols)
 
+    galoverlay = cv.imread("galoverlay.jpg")
+    # galoverlay = cv.resize(galoverlay, (0.1*))
+
     while True:
         # Capture frame-by-frame
         cv.namedWindow("Video", cv.WND_PROP_FULLSCREEN) # instead of cv2.WINDOW_AUTOSIZE
@@ -59,7 +62,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     loc = (0.5, 0.5)
-    amp = 2e5
+    amp = 2e4
     sig = 1e4
 
     device = -1
