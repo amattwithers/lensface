@@ -40,12 +40,12 @@ def make_gauss(centre, amp, sig, shapdim):
 
     iter = 0
     radius = 0
-    # while (iter < sidelenx) :
-    #     if (gaussblob[hy][hx+iter] < 0.01*gaussblob[hy][hx]) :
-    #         radius = iter
-    #         break
-    #     else :
-    #         iter += 1
+    while (iter < sidelenx) :
+        if (gaussblob[hy][hx+iter] < 0.2*gaussblob[hy][hx]) :
+            radius = iter
+            break
+        else :
+            iter += 1
 
     return -1.0*gaussblob, int(radius)
 
